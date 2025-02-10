@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@types/snoowrap": "^1.19.0",
+    "dotenv": "^16.3.1",
+    "path": "^0.12.7",
+    "snoowrap": "^1.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1"
+  }
+}
