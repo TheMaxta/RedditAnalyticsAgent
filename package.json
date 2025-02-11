@@ -2,10 +2,21 @@
   "dependencies": {
     "@types/snoowrap": "^1.19.0",
     "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "open": "^10.1.0",
+    "openai": "^4.83.0",
     "path": "^0.12.7",
-    "snoowrap": "^1.23.0"
+    "snoowrap": "^1.23.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.1"
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "start": "ts-node src/fetch-ollama-posts.ts",
+    "analyze": "ts-node src/analyze-post-categories.ts"
   }
 }

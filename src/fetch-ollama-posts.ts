@@ -6,7 +6,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Interface for the post data we want to extract
-interface RedditPost {
+export interface RedditPost {
   title: string;
   content: string;
   score: number;
@@ -21,7 +21,7 @@ const reddit = new Snoowrap({
   clientId: process.env.REDDIT_CLIENT_ID || '',
   clientSecret: process.env.REDDIT_CLIENT_SECRET || '',
   username: process.env.REDDIT_USERNAME || '',
-  password: process.env.REDDIT_PASSWORD || ''
+  password: process.env.REDDIT_PASSWORD || '',
 });
 
 // Validate environment variables
@@ -41,7 +41,7 @@ function validateEnvVariables() {
   }
 }
 
-async function fetchOllamaPosts(): Promise<RedditPost[]> {
+export async function fetchOllamaPosts(): Promise<RedditPost[]> {
   try {
     // Get posts from r/ollama from the past 24 hours
     const posts = await reddit.getSubreddit('ollama').getNew({
