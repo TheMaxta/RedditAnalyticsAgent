@@ -1,0 +1,353 @@
+# Project overview
+
+You will be using NextJS 14, shadcn, tailwind, Lucid icon
+
+# Core functionalities
+
+1. See list of available sub reddits & add new sub reddits
+   1. Users can see list of available sub reddits that already created display in cards, common ones like "ollama", "openai"
+   2. Users can clicking on an add reddit button, which should open a modal for users to paste in reddit url and add
+   3. After users adding a new reddit, a new card should be added
+
+2. Subreddit page
+   1. Clicking on each subreddit, should goes to a reddit page
+   2. With 2 tabs: "Top posts", "Themes"
+
+3. Fetch reddit posts data in "Top posts"
+   1. Under "Top posts" page, we want to display fetched reddit posts from past 24 hrs
+   2. We will use snowrap as library to fetch reddit data
+   3. Each post including title, score, content, url, created_utc, num_comments
+   4. Display the reddits in a table component, Sort based on num of score
+
+4. Analyse reddit posts data in "Themes"
+   1. For each post, we should send post data to OpenAI using structured output to categorise "Solution requests", "Pain & anger", "Advice requests", "Money talk";
+      1. "Solution requests": Posts where people are seeking solutions for problems
+      2. "Pain & anger": Posts where people are expressing pains or anger
+      3. "Advice requests": Posts where people are seeking advice
+      4. "Money talk": Posts where people are talking about spending money
+   2. This process needs to be ran concurrently for posts, so it will be faster
+   3. In "Themes" page, we should display each category as a card, with title, description & num of counts
+   4. Clicking on the card will open side panel to display all posts under this category
+
+5. Ability to add new cards
+   1. Users should be able to add a new card
+   2. After a new card is added, it should trigger the analysis again
+
+# Doc
+## Documentation of how to use snoowrap to fetch reddit posts
+CODE EXAMPLE:
+```
+import Snoowrap from 'snoowrap';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Interface for the post data we want to extract
+interface RedditPost {
+  title: string;
+  content: string;
+  score: number;
+  numComments: number;
+  created: Date;
+  url: string;
+}
+
+// Initialize the Snoowrap client with environment variables
+const reddit = new Snoowrap({
+  userAgent: process.env.REDDIT_USER_AGENT || '',
+  clientId: process.env.REDDIT_CLIENT_ID || '',
+  clientSecret: process.env.REDDIT_CLIENT_SECRET || '',
+  username: process.env.REDDIT_USERNAME || '',
+  password: process.env.REDDIT_PASSWORD || '',
+});
+
+// Validate environment variables
+function validateEnvVariables() {
+  const required = [
+    'REDDIT_USER_AGENT',
+    'REDDIT_CLIENT_ID',
+    'REDDIT_CLIENT_SECRET',
+    'REDDIT_USERNAME',
+    'REDDIT_PASSWORD'
+  ];
+
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+
+async function fetchOllamaPosts(): Promise<RedditPost[]> {
+  try {
+    // Get posts from r/ollama from the past 24 hours
+    const posts = await reddit.getSubreddit('ollama').getNew({
+      limit: 100 // Maximum posts to fetch
+    });
+
+    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+
+    // Filter and map the posts
+    const recentPosts = posts
+      .filter(post => post.created_utc * 1000 > twentyFourHoursAgo)
+      .map(post => ({
+        title: post.title,
+        content: post.selftext || '', // selftext contains the post content
+        score: post.score,
+        numComments: post.num_comments,
+        created: new Date(post.created_utc * 1000),
+        url: `https://reddit.com${post.permalink}`
+      }));
+
+    return recentPosts;
+
+  } catch (error) {
+    console.error('Error fetching Reddit posts:', error);
+    throw error;
+  }
+}
+
+// Example usage
+async function main() {
+  try {
+    validateEnvVariables();
+    const ollamaPosts = await fetchOllamaPosts();
+    console.log('Recent Ollama Posts:', ollamaPosts);
+    
+    // Print each post in a readable format
+    ollamaPosts.forEach((post, index) => {
+      console.log(`\n--- Post ${index + 1} ---`);
+      console.log(`Title: ${post.title}`);
+      console.log(`Score: ${post.score}`);
+      console.log(`Comments: ${post.numComments}`);
+      console.log(`Created: ${post.created.toLocaleString()}`);
+      console.log(`URL: ${post.url}`);
+      if (post.content) {
+        console.log(`Content: ${post.content.substring(0, 150)}...`);
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in main:', error);
+    process.exit(1);
+  }
+}
+
+// Run the script
+main(); 
+```
+
+
+# Documentation of how to use structured output to categorise reddit posts
+```
+import { RedditPost } from './fetch-ollama-posts';
+import OpenAI from 'openai';
+import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// Define the zod schema for the structured output
+const PostAnalysisExtraction = z.object({
+  categories: z.object({
+    isSolutionRequest: z.boolean(),
+    isPainOrAnger: z.boolean(),
+    isAdviceRequest: z.boolean(),
+    isMoneyTalk: z.boolean()
+  }),
+  reasoning: z.object({
+    solutionRequest: z.string().optional(),
+    painOrAnger: z.string().optional(),
+    adviceRequest: z.string().optional(),
+    moneyTalk: z.string().optional()
+  })
+});
+
+type PostAnalysisSchema = z.infer<typeof PostAnalysisExtraction>;
+
+interface PostCategoryAnalysis {
+  postId: string;
+  title: string;
+  categories: PostAnalysisSchema["categories"];
+  reasoning: PostAnalysisSchema["reasoning"];
+}
+
+class PostAnalyzer {
+  private async analyzePostWithAI(post: RedditPost): Promise<PostAnalysisSchema> {
+    const prompt = `Analyze this Reddit post and return a JSON response categorizing it:
+
+Post Title: ${post.title}
+Post Content: ${post.content}`;
+
+    try {
+      // Log when the API call is starting
+      console.log(`Starting API call for post: "${post.title}"`);
+
+      const completion = await openai.beta.chat.completions.parse({
+        model: "gpt-4o-2024-08-06",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an expert at analyzing Reddit posts. Return JSON with boolean categories and optional reasoning."
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: zodResponseFormat(PostAnalysisExtraction, "post_analysis_extraction")
+      });
+
+      // Log the entire API response (parsed result)
+      console.log(`API call completed for post: "${post.title}"`);
+      console.log("Returned data:", JSON.stringify(completion.choices[0].message.parsed, null, 2));
+
+      const parsed = completion.choices[0].message.parsed;
+      if (!parsed) {
+        throw new Error("Failed to parse AI response according to the schema.");
+      }
+      return parsed;
+    } catch (error) {
+      console.error(`Error analyzing post "${post.title}" with AI:`, error);
+      throw error;
+    }
+  }
+
+  public async analyzePost(post: RedditPost): Promise<PostCategoryAnalysis> {
+    const analysis = await this.analyzePostWithAI(post);
+    return {
+      postId: post.url,
+      title: post.title,
+      categories: analysis.categories,
+      reasoning: analysis.reasoning
+    };
+  }
+
+  public async analyzePosts(posts: RedditPost[]): Promise<PostCategoryAnalysis[]> {
+    const analyses: PostCategoryAnalysis[] = [];
+
+    // Process posts one at a time (with logging) to avoid rate limiting
+    for (const post of posts) {
+      console.log(`\n--- Analyzing post: "${post.title}" ---`);
+      const analysis = await this.analyzePost(post);
+      analyses.push(analysis);
+      // Add a small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    return analyses;
+  }
+
+  public generateSummary(analyses: PostCategoryAnalysis[]): void {
+    const totalPosts = analyses.length;
+    const categoryCounts = {
+      solutionRequests: 0,
+      painAndAnger: 0,
+      adviceRequests: 0,
+      moneyTalk: 0
+    };
+
+    analyses.forEach(analysis => {
+      if (analysis.categories.isSolutionRequest) categoryCounts.solutionRequests++;
+      if (analysis.categories.isPainOrAnger) categoryCounts.painAndAnger++;
+      if (analysis.categories.isAdviceRequest) categoryCounts.adviceRequests++;
+      if (analysis.categories.isMoneyTalk) categoryCounts.moneyTalk++;
+    });
+
+    console.log("\n=== Post Category Analysis Summary ===");
+    console.log(`Total Posts Analyzed: ${totalPosts}`);
+    console.log(
+      `Solution Requests: ${categoryCounts.solutionRequests} (${totalPosts ? ((categoryCounts.solutionRequests / totalPosts) * 100).toFixed(1) : 0}%)`
+    );
+    console.log(
+      `Pain & Anger Posts: ${categoryCounts.painAndAnger} (${totalPosts ? ((categoryCounts.painAndAnger / totalPosts) * 100).toFixed(1) : 0}%)`
+    );
+    console.log(
+      `Advice Requests: ${categoryCounts.adviceRequests} (${totalPosts ? ((categoryCounts.adviceRequests / totalPosts) * 100).toFixed(1) : 0}%)`
+    );
+    console.log(
+      `Money Related: ${categoryCounts.moneyTalk} (${totalPosts ? ((categoryCounts.moneyTalk / totalPosts) * 100).toFixed(1) : 0}%)`
+    );
+
+    this.printDetailedAnalysis(analyses);
+  }
+
+  private printDetailedAnalysis(analyses: PostCategoryAnalysis[]): void {
+    console.log("\n=== Detailed Analysis by Category ===");
+
+    const categories = [
+      { name: "Solution Requests", key: "isSolutionRequest", reasonKey: "solutionRequest" },
+      { name: "Pain & Anger", key: "isPainOrAnger", reasonKey: "painOrAnger" },
+      { name: "Advice Requests", key: "isAdviceRequest", reasonKey: "adviceRequest" },
+      { name: "Money Talk", key: "isMoneyTalk", reasonKey: "moneyTalk" }
+    ] as const;
+
+    categories.forEach(category => {
+      console.log(`\n${category.name}:`);
+      const examples = analyses.filter(analysis => analysis.categories[category.key]).slice(0, 3);
+
+      examples.forEach(example => {
+        console.log(`\nTitle: ${example.title}`);
+        if (example.reasoning[category.reasonKey]) {
+          console.log(`Reasoning: ${example.reasoning[category.reasonKey]}`);
+        }
+      });
+    });
+  }
+}
+
+
+async function main() {
+  try {
+    // Add command line argument parsing
+    const postIndex = process.argv[2] ? parseInt(process.argv[2]) : undefined;
+    
+    const { fetchOllamaPosts } = await import("./fetch-ollama-posts");
+    const allPosts = await fetchOllamaPosts();
+
+    console.log(`Fetched ${allPosts.length} posts total.`);
+    
+    const analyzer = new PostAnalyzer();
+    
+    if (postIndex !== undefined) {
+      // Validate post index
+      if (postIndex < 0 || postIndex >= allPosts.length) {
+        throw new Error(`Invalid post index: ${postIndex}. Must be between 0 and ${allPosts.length - 1}`);
+      }
+      
+      // Analyze single post
+      console.log(`Analyzing only post at index ${postIndex}`);
+      const singlePost = allPosts[postIndex];
+      const analysis = await analyzer.analyzePost(singlePost);
+      analyzer.generateSummary([analysis]);
+    } else {
+      // Analyze all posts
+      const analyses = await analyzer.analyzePosts(allPosts);
+      analyzer.generateSummary(analyses);
+    }
+  } catch (error) {
+    console.error("Error in post category analysis:", error);
+    process.exit(1);
+  }
+}
+
+
+// If using CommonJS, the following check is acceptable.
+// For ES modules, consider invoking main() directly.
+if (require.main === module) {
+  main();
+}
+
+export { PostAnalyzer, PostCategoryAnalysis };
+```
+
+
+# Current File Structure
