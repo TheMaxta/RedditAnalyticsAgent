@@ -1,0 +1,17 @@
+{
+    "type": "module",
+    "scripts": {
+      "fetch": "ts-node ./fetch-ollama-posts.ts",
+      "analyze": "ts-node ./analyze_post_categories.ts"
+    },
+    "devDependencies": {
+      "ts-node": "^10.9.2",
+      "@types/snoowrap": "^1.19.0"
+    },
+    "dependencies": {
+      "dotenv": "^16.0.3",
+      "snoowrap": "^1.23.0",
+      "openai": "^4.0.0",
+      "zod": "^3.21.4"
+    }
+  }

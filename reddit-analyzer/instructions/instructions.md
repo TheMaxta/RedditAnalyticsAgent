@@ -1,42 +1,73 @@
-# Project overview
+# Reddit Analyzer Project PRD
 
-You will be using NextJS 14, shadcn, tailwind, Lucid icon
+**Version:** 1.0  
+**Date:** February 16, 2025  
+**Authors:** [Your Team]
 
-# Core functionalities
+## 1. Project Overview
 
-1. See list of available sub reddits & add new sub reddits
-   1. Users can see list of available sub reddits that already created display in cards, common ones like "ollama", "openai"
-   2. Users can clicking on an add reddit button, which should open a modal for users to paste in reddit url and add
-   3. After users adding a new reddit, a new card should be added
+The Reddit Analyzer project is a web application built using NextJS 14, shadcn components, Tailwind CSS, and Lucid icons. The application's primary function is to fetch Reddit posts from selected subreddits, analyze them using OpenAI's API, and display the results in an organized manner. Users can add new subreddits, view posts in a table format, and see categorized themes based on post analysis.
 
-2. Subreddit page
-   1. Clicking on each subreddit, should goes to a reddit page
-   2. With 2 tabs: "Top posts", "Themes"
+## 2. Goals & Objectives
 
-3. Fetch reddit posts data in "Top posts"
-   1. Under "Top posts" page, we want to display fetched reddit posts from past 24 hrs
-   2. We will use snowrap as library to fetch reddit data
-   3. Each post including title, score, content, url, created_utc, num_comments
-   4. Display the reddits in a table component, Sort based on num of score
+- **User Engagement:** Allow users to easily add and explore subreddits.
+- **Data Visibility:** Display Reddit posts from the past 24 hours in a sorted table.
+- **Insights:** Analyze posts with AI to extract meaningful themes:
+  - *Solution Requests* – Posts asking for solutions.
+  - *Pain & Anger* – Posts expressing frustration or anger.
+  - *Advice Requests* – Posts seeking advice.
+  - *Money Talk* – Posts discussing spending or money.
+- **Extensibility:** Enable users to add new analysis cards that trigger a re-run of the post analysis.
 
-4. Analyse reddit posts data in "Themes"
-   1. For each post, we should send post data to OpenAI using structured output to categorise "Solution requests", "Pain & anger", "Advice requests", "Money talk";
-      1. "Solution requests": Posts where people are seeking solutions for problems
-      2. "Pain & anger": Posts where people are expressing pains or anger
-      3. "Advice requests": Posts where people are seeking advice
-      4. "Money talk": Posts where people are talking about spending money
-   2. This process needs to be ran concurrently for posts, so it will be faster
-   3. In "Themes" page, we should display each category as a card, with title, description & num of counts
-   4. Clicking on the card will open side panel to display all posts under this category
+## 3. Technical Stack
 
-5. Ability to add new cards
-   1. Users should be able to add a new card
-   2. After a new card is added, it should trigger the analysis again
+- **Frontend:** NextJS 14, shadcn components, Tailwind CSS
+- **Backend/Server-Side:** NextJS API routes (if needed) or server components
+- **External Integrations:**
+  - **Reddit API** via [snoowrap](https://github.com/not-an-aardvark/snoowrap) for fetching posts.
+  - **OpenAI API** for categorizing post content using structured output.
+- **Icons:** Lucid icons
 
-# Doc
-## Documentation of how to use snoowrap to fetch reddit posts
-CODE EXAMPLE:
-```
+## 4. Core Functionalities & Detailed Requirements
+
+### 4.1. Subreddit Listing & Adding
+
+- **Listing Existing Subreddits:**
+  - Display available subreddits (e.g., "ollama", "openai") as cards on the homepage.
+  - Each card should show the subreddit name and an associated icon.
+
+- **Adding a New Subreddit:**
+  - A clearly visible "Add Subreddit" button opens a modal.
+  - In the modal, users can paste a Reddit URL.
+  - On confirmation, a new subreddit card is added to the list.
+
+### 4.2. Subreddit Detail Page
+
+- **Navigation:**
+  - Clicking on any subreddit card routes the user to a dynamic page (e.g., `/subreddit/[slug]`).
+
+- **Tabs:**
+  - **Top posts:** Displays a table of Reddit posts fetched from the subreddit.
+  - **Themes:** Displays categorized analysis results.
+
+### 4.3. Fetching Reddit Posts in "Top posts"
+
+- **Data Source:** Use the snoowrap library to fetch posts.
+- **Data Range:** Posts from the past 24 hours.
+- **Data Fields:** Each post should include:
+  - `title`
+  - `score`
+  - `content` (or selftext)
+  - `url`
+  - `created_utc`
+  - `num_comments`
+- **Display Requirements:**
+  - Posts are shown in a table component.
+  - Table should allow sorting based on the number of scores.
+
+**Snoowrap Code Example:**
+
+```typescript
 import Snoowrap from 'snoowrap';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -136,12 +167,35 @@ async function main() {
 }
 
 // Run the script
-main(); 
+main();
 ```
 
+### 4.4. Analyzing Reddit Posts in "Themes"
 
-# Documentation of how to use structured output to categorise reddit posts
-```
+- **Analysis Requirements:**
+  - For each post fetched, the post data should be sent to OpenAI's API.
+  - Use a structured JSON output to categorize posts into four themes:
+    - **Solution Requests:** Posts seeking solutions.
+    - **Pain & Anger:** Posts expressing pain or anger.
+    - **Advice Requests:** Posts seeking advice.
+    - **Money Talk:** Posts discussing spending money.
+  
+- **Concurrency:**
+  - Analysis of posts should be processed concurrently to improve performance.
+  
+- **Display:**
+  - On the "Themes" page, each category is represented as a card showing:
+    - Title
+    - Description
+    - Count of posts in that category
+  - Clicking a category card opens a side panel with a detailed list of posts belonging to that category.
+
+- **Re-analysis Trigger:**
+  - If users add new analysis cards, the system should re-trigger the analysis process.
+
+**OpenAI Analysis Code Example:**
+
+```typescript
 import { RedditPost } from './fetch-ollama-posts';
 import OpenAI from 'openai';
 import { z } from 'zod';
@@ -190,7 +244,6 @@ Post Title: ${post.title}
 Post Content: ${post.content}`;
 
     try {
-      // Log when the API call is starting
       console.log(`Starting API call for post: "${post.title}"`);
 
       const completion = await openai.beta.chat.completions.parse({
@@ -206,7 +259,6 @@ Post Content: ${post.content}`;
         response_format: zodResponseFormat(PostAnalysisExtraction, "post_analysis_extraction")
       });
 
-      // Log the entire API response (parsed result)
       console.log(`API call completed for post: "${post.title}"`);
       console.log("Returned data:", JSON.stringify(completion.choices[0].message.parsed, null, 2));
 
@@ -234,12 +286,10 @@ Post Content: ${post.content}`;
   public async analyzePosts(posts: RedditPost[]): Promise<PostCategoryAnalysis[]> {
     const analyses: PostCategoryAnalysis[] = [];
 
-    // Process posts one at a time (with logging) to avoid rate limiting
     for (const post of posts) {
       console.log(`\n--- Analyzing post: "${post.title}" ---`);
       const analysis = await this.analyzePost(post);
       analyses.push(analysis);
-      // Add a small delay between requests
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
@@ -304,10 +354,8 @@ Post Content: ${post.content}`;
   }
 }
 
-
 async function main() {
   try {
-    // Add command line argument parsing
     const postIndex = process.argv[2] ? parseInt(process.argv[2]) : undefined;
     
     const { fetchOllamaPosts } = await import("./fetch-ollama-posts");
@@ -318,18 +366,15 @@ async function main() {
     const analyzer = new PostAnalyzer();
     
     if (postIndex !== undefined) {
-      // Validate post index
       if (postIndex < 0 || postIndex >= allPosts.length) {
         throw new Error(`Invalid post index: ${postIndex}. Must be between 0 and ${allPosts.length - 1}`);
       }
       
-      // Analyze single post
       console.log(`Analyzing only post at index ${postIndex}`);
       const singlePost = allPosts[postIndex];
       const analysis = await analyzer.analyzePost(singlePost);
       analyzer.generateSummary([analysis]);
     } else {
-      // Analyze all posts
       const analyses = await analyzer.analyzePosts(allPosts);
       analyzer.generateSummary(analyses);
     }
@@ -339,15 +384,4 @@ async function main() {
   }
 }
 
-
-// If using CommonJS, the following check is acceptable.
-// For ES modules, consider invoking main() directly.
 if (require.main === module) {
-  main();
-}
-
-export { PostAnalyzer, PostCategoryAnalysis };
-```
-
-
-# Current File Structure
