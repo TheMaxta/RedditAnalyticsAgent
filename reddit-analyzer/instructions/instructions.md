@@ -196,23 +196,21 @@ main();
 **OpenAI Analysis Code Example:**
 
 ```typescript
-import { RedditPost } from './fetch-ollama-posts';
-import OpenAI from 'openai';
-import { z } from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+import { ThemeAnalysis, PostThemes } from "@/types/themes";
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import { z } from "zod";
 
-// Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: "https://oai.helicone.ai/v1",
+  defaultHeaders: {
+    "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
+  },
 });
 
-// Define the zod schema for the structured output
-const PostAnalysisExtraction = z.object({
+const ThemeResponseSchema = z.object({
   categories: z.object({
     isSolutionRequest: z.boolean(),
     isPainOrAnger: z.boolean(),
@@ -220,168 +218,153 @@ const PostAnalysisExtraction = z.object({
     isMoneyTalk: z.boolean()
   }),
   reasoning: z.object({
-    solutionRequest: z.string().optional(),
-    painOrAnger: z.string().optional(),
-    adviceRequest: z.string().optional(),
-    moneyTalk: z.string().optional()
+    solutionRequest: z.string().nullable().optional(),
+    painOrAnger: z.string().nullable().optional(),
+    adviceRequest: z.string().nullable().optional(),
+    moneyTalk: z.string().nullable().optional()
   })
 });
 
-type PostAnalysisSchema = z.infer<typeof PostAnalysisExtraction>;
+export async function POST(
+  request: Request,
+  { params }: { params: { name: string } }
+) {
+  console.log(`[Themes API] Analyzing posts for r/${params.name}`);
+  
+  try {
+    const posts = await request.json();
+    console.log(`[Themes API] Analyzing ${posts.length} posts`);
+    const analyses: ThemeAnalysis[] = [];
 
-interface PostCategoryAnalysis {
-  postId: string;
-  title: string;
-  categories: PostAnalysisSchema["categories"];
-  reasoning: PostAnalysisSchema["reasoning"];
-}
-
-class PostAnalyzer {
-  private async analyzePostWithAI(post: RedditPost): Promise<PostAnalysisSchema> {
-    const prompt = `Analyze this Reddit post and return a JSON response categorizing it:
-
-Post Title: ${post.title}
-Post Content: ${post.content}`;
-
-    try {
-      console.log(`Starting API call for post: "${post.title}"`);
-
-      const completion = await openai.beta.chat.completions.parse({
-        model: "gpt-4o-2024-08-06",
+    for (const post of posts) {
+      console.log(`[Themes API] Analyzing post: "${post.title.substring(0, 50)}..."`);
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content:
-              "You are an expert at analyzing Reddit posts. Return JSON with boolean categories and optional reasoning."
+            content: "You are a post analyzer that categorizes Reddit posts into specific themes."
           },
-          { role: "user", content: prompt }
+          {
+            role: "user",
+            content: `Analyze this Reddit post:\nTitle: ${post.title}\nContent: ${post.content}`
+          }
         ],
-        response_format: zodResponseFormat(PostAnalysisExtraction, "post_analysis_extraction")
+        functions: [{
+          name: "analyze_post",
+          description: "Categorize a Reddit post into themes",
+          parameters: {
+            type: "object",
+            properties: {
+              categories: {
+                type: "object",
+                properties: {
+                  isSolutionRequest: { type: "boolean" },
+                  isPainOrAnger: { type: "boolean" },
+                  isAdviceRequest: { type: "boolean" },
+                  isMoneyTalk: { type: "boolean" }
+                },
+                required: ["isSolutionRequest", "isPainOrAnger", "isAdviceRequest", "isMoneyTalk"]
+              },
+              reasoning: {
+                type: "object",
+                properties: {
+                  solutionRequest: { type: "string" },
+                  painOrAnger: { type: "string" },
+                  adviceRequest: { type: "string" },
+                  moneyTalk: { type: "string" }
+                }
+              }
+            },
+            required: ["categories", "reasoning"]
+          }
+        }],
+        function_call: { name: "analyze_post" }
       });
 
-      console.log(`API call completed for post: "${post.title}"`);
-      console.log("Returned data:", JSON.stringify(completion.choices[0].message.parsed, null, 2));
+      const analysis = ThemeResponseSchema.parse(
+        JSON.parse(completion.choices[0].message.function_call?.arguments || "{}")
+      );
 
-      const parsed = completion.choices[0].message.parsed;
-      if (!parsed) {
-        throw new Error("Failed to parse AI response according to the schema.");
-      }
-      return parsed;
-    } catch (error) {
-      console.error(`Error analyzing post "${post.title}" with AI:`, error);
-      throw error;
-    }
-  }
-
-  public async analyzePost(post: RedditPost): Promise<PostCategoryAnalysis> {
-    const analysis = await this.analyzePostWithAI(post);
-    return {
-      postId: post.url,
-      title: post.title,
-      categories: analysis.categories,
-      reasoning: analysis.reasoning
-    };
-  }
-
-  public async analyzePosts(posts: RedditPost[]): Promise<PostCategoryAnalysis[]> {
-    const analyses: PostCategoryAnalysis[] = [];
-
-    for (const post of posts) {
-      console.log(`\n--- Analyzing post: "${post.title}" ---`);
-      const analysis = await this.analyzePost(post);
-      analyses.push(analysis);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    return analyses;
-  }
-
-  public generateSummary(analyses: PostCategoryAnalysis[]): void {
-    const totalPosts = analyses.length;
-    const categoryCounts = {
-      solutionRequests: 0,
-      painAndAnger: 0,
-      adviceRequests: 0,
-      moneyTalk: 0
-    };
-
-    analyses.forEach(analysis => {
-      if (analysis.categories.isSolutionRequest) categoryCounts.solutionRequests++;
-      if (analysis.categories.isPainOrAnger) categoryCounts.painAndAnger++;
-      if (analysis.categories.isAdviceRequest) categoryCounts.adviceRequests++;
-      if (analysis.categories.isMoneyTalk) categoryCounts.moneyTalk++;
-    });
-
-    console.log("\n=== Post Category Analysis Summary ===");
-    console.log(`Total Posts Analyzed: ${totalPosts}`);
-    console.log(
-      `Solution Requests: ${categoryCounts.solutionRequests} (${totalPosts ? ((categoryCounts.solutionRequests / totalPosts) * 100).toFixed(1) : 0}%)`
-    );
-    console.log(
-      `Pain & Anger Posts: ${categoryCounts.painAndAnger} (${totalPosts ? ((categoryCounts.painAndAnger / totalPosts) * 100).toFixed(1) : 0}%)`
-    );
-    console.log(
-      `Advice Requests: ${categoryCounts.adviceRequests} (${totalPosts ? ((categoryCounts.adviceRequests / totalPosts) * 100).toFixed(1) : 0}%)`
-    );
-    console.log(
-      `Money Related: ${categoryCounts.moneyTalk} (${totalPosts ? ((categoryCounts.moneyTalk / totalPosts) * 100).toFixed(1) : 0}%)`
-    );
-
-    this.printDetailedAnalysis(analyses);
-  }
-
-  private printDetailedAnalysis(analyses: PostCategoryAnalysis[]): void {
-    console.log("\n=== Detailed Analysis by Category ===");
-
-    const categories = [
-      { name: "Solution Requests", key: "isSolutionRequest", reasonKey: "solutionRequest" },
-      { name: "Pain & Anger", key: "isPainOrAnger", reasonKey: "painOrAnger" },
-      { name: "Advice Requests", key: "isAdviceRequest", reasonKey: "adviceRequest" },
-      { name: "Money Talk", key: "isMoneyTalk", reasonKey: "moneyTalk" }
-    ] as const;
-
-    categories.forEach(category => {
-      console.log(`\n${category.name}:`);
-      const examples = analyses.filter(analysis => analysis.categories[category.key]).slice(0, 3);
-
-      examples.forEach(example => {
-        console.log(`\nTitle: ${example.title}`);
-        if (example.reasoning[category.reasonKey]) {
-          console.log(`Reasoning: ${example.reasoning[category.reasonKey]}`);
-        }
+      analyses.push({
+        postId: post.url,
+        title: post.title,
+        categories: analysis.categories,
+        reasoning: analysis.reasoning
       });
-    });
-  }
-}
-
-async function main() {
-  try {
-    const postIndex = process.argv[2] ? parseInt(process.argv[2]) : undefined;
-    
-    const { fetchOllamaPosts } = await import("./fetch-ollama-posts");
-    const allPosts = await fetchOllamaPosts();
-
-    console.log(`Fetched ${allPosts.length} posts total.`);
-    
-    const analyzer = new PostAnalyzer();
-    
-    if (postIndex !== undefined) {
-      if (postIndex < 0 || postIndex >= allPosts.length) {
-        throw new Error(`Invalid post index: ${postIndex}. Must be between 0 and ${allPosts.length - 1}`);
-      }
-      
-      console.log(`Analyzing only post at index ${postIndex}`);
-      const singlePost = allPosts[postIndex];
-      const analysis = await analyzer.analyzePost(singlePost);
-      analyzer.generateSummary([analysis]);
-    } else {
-      const analyses = await analyzer.analyzePosts(allPosts);
-      analyzer.generateSummary(analyses);
     }
+
+    console.log(`[Themes API] Completed analysis of ${analyses.length} posts`);
+    return NextResponse.json(analyses);
   } catch (error) {
-    console.error("Error in post category analysis:", error);
-    process.exit(1);
+    console.error(`[Themes API] Error analyzing posts:`, error);
+    return NextResponse.json({ error: 'Failed to analyze posts' }, { status: 500 });
   }
-}
+} 
 
-if (require.main === module) {
+
+```
+
+# Project Structure
+.
+├── README.md
+├── components.json
+├── eslint.config.mjs
+├── instructions
+│   └── instructions.md
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── project_persistency_details.md
+├── public
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── scripts
+├── scripts-test
+│   ├── analyze_post_categories.ts
+│   ├── fetch-ollama-posts.ts
+│   ├── package-lock.json
+│   └── package.json
+├── src
+│   ├── app
+│   │   ├── api
+│   │   │   └── subreddit
+│   │   │       └── [name]
+│   │   │           ├── posts
+│   │   │           │   └── route.ts
+│   │   │           └── themes
+│   │   │               └── route.ts
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── subreddit
+│   │       └── [name]
+│   │           └── page.tsx
+│   ├── components
+│   │   ├── AddSubredditModal.tsx
+│   │   ├── PostsTable.tsx
+│   │   ├── SubredditCard.tsx
+│   │   ├── ThemeCards.tsx
+│   │   └── ui
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── sheet.tsx
+│   │       ├── table.tsx
+│   │       └── tabs.tsx
+│   ├── lib
+│   │   └── utils.ts
+│   └── types
+│       ├── reddit.ts
+│       └── themes.ts
+├── tailwind.config.ts
+└── tsconfig.json

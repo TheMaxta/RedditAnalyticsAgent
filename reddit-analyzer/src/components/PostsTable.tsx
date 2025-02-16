@@ -66,7 +66,11 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {getThemesForPost(post.url).map(theme => (
-                    <Badge variant="secondary" className="bg-papaya_whip-800 text-rich_black">
+                    <Badge 
+                      key={`${post.url}-${theme}`} 
+                      variant="secondary" 
+                      className="bg-papaya_whip-800 text-rich_black"
+                    >
                       {theme}
                     </Badge>
                   ))}
