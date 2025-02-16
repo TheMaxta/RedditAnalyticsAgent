@@ -14,10 +14,13 @@ export async function GET(
   request: Request,
   { params }: { params: { name: string } }
 ) {
+  console.log(`[Posts API] Fetching posts for r/${params.name}`);
+  const { name } = await params;
   try {
-    const posts = await reddit.getSubreddit(params.name).getNew({
+    const posts = await reddit.getSubreddit(name).getNew({
       limit: 100
     });
+    console.log(`[Posts API] Found ${posts.length} total posts for r/${name}`);
 
     const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
 
@@ -33,9 +36,10 @@ export async function GET(
       }))
       .sort((a, b) => b.score - a.score);
 
+    console.log(`[Posts API] Returning ${recentPosts.length} recent posts for r/${name}`);
     return NextResponse.json(recentPosts);
   } catch (error) {
-    console.error('Error fetching Reddit posts:', error);
+    console.error(`[Posts API] Error fetching posts for r/${name}:`, error);
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
   }
 } 

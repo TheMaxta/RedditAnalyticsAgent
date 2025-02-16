@@ -9,10 +9,10 @@ interface SubredditCardProps {
 export function SubredditCard({ name }: SubredditCardProps) {
   return (
     <Link href={`/subreddit/${name}`}>
-      <Card className="hover:bg-accent transition-colors cursor-pointer">
+      <Card className="hover:bg-papaya_whip-800 transition-colors cursor-pointer">
         <CardHeader className="flex flex-row items-center gap-4">
-          <MessageSquare className="w-8 h-8 text-orange-500" />
-          <CardTitle>r/{name}</CardTitle>
+          <MessageSquare className="w-8 h-8 text-caribbean_current" />
+          <CardTitle className="text-rich_black">{name}</CardTitle>
         </CardHeader>
       </Card>
     </Link>
