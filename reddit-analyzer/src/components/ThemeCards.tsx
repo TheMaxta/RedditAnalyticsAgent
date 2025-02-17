@@ -8,43 +8,46 @@ interface ThemeCardsProps {
   analyses: ThemeAnalysis[];
 }
 
+const sortByScore = (posts: ThemeAnalysis[]) => 
+  posts.sort((a, b) => (b.posts?.score || 0) - (a.posts?.score || 0));
+
 export function ThemeCards({ analyses = [] }: ThemeCardsProps) {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
   const themes = {
     solutionRequest: {
       title: "Solution Requests",
-      posts: analyses.filter(a => a.categories.isSolutionRequest),
+      posts: sortByScore(analyses.filter(a => a.categories.isSolutionRequest)),
       description: "Posts asking for solutions"
     },
     painOrAnger: {
       title: "Pain & Anger",
-      posts: analyses.filter(a => a.categories.isPainOrAnger),
+      posts: sortByScore(analyses.filter(a => a.categories.isPainOrAnger)),
       description: "Posts expressing frustration or anger"
     },
     adviceRequest: {
       title: "Advice Requests",
-      posts: analyses.filter(a => a.categories.isAdviceRequest),
+      posts: sortByScore(analyses.filter(a => a.categories.isAdviceRequest)),
       description: "Posts seeking advice"
     },
     moneyTalk: {
       title: "Money Talk",
-      posts: analyses.filter(a => a.categories.isMoneyTalk),
+      posts: sortByScore(analyses.filter(a => a.categories.isMoneyTalk)),
       description: "Posts discussing spending or money"
     },
     research: {
       title: "Research & Studies",
-      posts: analyses.filter(a => a.categories.isResearch),
+      posts: sortByScore(analyses.filter(a => a.categories.isResearch)),
       description: "Posts about research, papers, or studies"
     },
     discussion: {
       title: "General Discussion",
-      posts: analyses.filter(a => a.categories.isDiscussion),
+      posts: sortByScore(analyses.filter(a => a.categories.isDiscussion)),
       description: "Open discussions and conversations"
     },
     videoContent: {
       title: "Video Content",
-      posts: analyses.filter(a => a.categories.hasVideoContent),
+      posts: sortByScore(analyses.filter(a => a.categories.hasVideoContent)),
       description: "Posts referencing or sharing videos"
     }
   };

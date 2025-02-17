@@ -33,7 +33,15 @@ export class ThemeModel extends BaseModel<ThemeAnalysis> {
       .upsert(analyses, {
         onConflict: 'post_id'
       })
-      .select()
+      .select(`
+        *,
+        posts (
+          id,
+          title,
+          url,
+          score
+        )
+      `)
 
     if (error) throw error
     return data
