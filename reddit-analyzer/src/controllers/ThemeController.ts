@@ -26,7 +26,13 @@ export class ThemeController extends BaseController {
       const postsToAnalyze = posts.filter(p => !analyzedPostIds.has(p.id))
       
       if (postsToAnalyze.length > 0) {
-        const newAnalyses = await this.openAIService.analyzeBatch(postsToAnalyze)
+        // Add url to the posts we're analyzing
+        const postsWithUrls = postsToAnalyze.map(post => ({
+          ...post,
+          url: post.url || null  // Provide null if url doesn't exist
+        }))
+        
+        const newAnalyses = await this.openAIService.analyzeBatch(postsWithUrls)
         await this.themeModel.createBatch(newAnalyses)
         
         return [...existingAnalyses, ...newAnalyses]

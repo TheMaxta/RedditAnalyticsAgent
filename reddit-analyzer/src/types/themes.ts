@@ -8,6 +8,7 @@ export interface PostThemes {
 export interface ThemeAnalysis {
   post_id: string;
   title: string;
+  url: string;
   categories: {
     isSolutionRequest: boolean;
     isPainOrAnger: boolean;

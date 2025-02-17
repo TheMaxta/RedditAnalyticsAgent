@@ -56,7 +56,7 @@ export function ThemeCards({ analyses = [] }: ThemeCardsProps) {
               {theme.posts.map(post => (
                 <div key={post.post_id} className="space-y-2">
                   <a 
-                    href={post.post_id} 
+                    href={post.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="font-medium hover:underline"
