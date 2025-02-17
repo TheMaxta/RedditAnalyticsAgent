@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeAnalysis } from "@/types/themes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
+import { ArrowBigUp } from "lucide-react";
 
 interface ThemeCardsProps {
   analyses: ThemeAnalysis[];
@@ -48,23 +49,33 @@ export function ThemeCards({ analyses = [] }: ThemeCardsProps) {
               </CardContent>
             </Card>
           </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>{theme.title}</SheetTitle>
+          <SheetContent className="w-[600px] sm:w-[800px] overflow-y-auto">
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-2xl">{theme.title}</SheetTitle>
+              <p className="text-muted-foreground">{theme.description}</p>
             </SheetHeader>
-            <div className="mt-4 space-y-4">
-              {theme.posts.map(post => (
-                <div key={post.post_id} className="space-y-2">
-                  <a 
-                    href={post.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="font-medium hover:underline"
-                  >
-                    {post.title}
-                  </a>
-                  <p className="text-sm text-muted-foreground">
-                    {post.reasoning[key as keyof typeof post.reasoning]}
+            <div className="space-y-6">
+              {theme.posts.map(analysis => (
+                <div 
+                  key={analysis.post_id} 
+                  className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <a 
+                      href={analysis.posts?.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-lg font-medium hover:underline flex-grow text-caribbean_current"
+                    >
+                      {analysis.posts?.title}
+                    </a>
+                    <div className="flex items-center gap-1 text-sm">
+                      <ArrowBigUp className="h-4 w-4 text-caribbean_current" />
+                      <span className="font-medium">{analysis.posts?.score}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {analysis.reasoning[key as keyof typeof analysis.reasoning]}
                   </p>
                 </div>
               ))}

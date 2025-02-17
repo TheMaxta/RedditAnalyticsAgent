@@ -29,8 +29,8 @@ interface PostsTableProps {
 }
 
 export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps) {
-  const getThemesForPost = (postUrl: string) => {
-    const analysis = themes.find(t => t.post_id === postUrl);
+  const getThemesForPost = (postId: string) => {
+    const analysis = themes.find(t => t.post_id === postId);
     if (!analysis) return [];
 
     const activeThemes = [];
@@ -57,7 +57,7 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
       </TableHeader>
       <TableBody>
         {sortedPosts.map((post, index) => (
-          <TableRow key={post.url} className={index % 2 === 0 ? "bg-table-row" : ""}>
+          <TableRow key={post.id} className={index % 2 === 0 ? "bg-table-row" : ""}>
             <TableCell>
               <a 
                 href={post.url} 
@@ -78,14 +78,8 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-1">
-                  {getThemesForPost(post.url).map(theme => (
-                    <Badge 
-                      key={`${post.url}-${theme}`} 
-                      variant="secondary" 
-                      className="bg-papaya_whip-800 text-rich_black"
-                    >
-                      {theme}
-                    </Badge>
+                  {getThemesForPost(post.id).map(theme => (
+                    <Badge key={`${post.id}-${theme}`}>{theme}</Badge>
                   ))}
                 </div>
               )}

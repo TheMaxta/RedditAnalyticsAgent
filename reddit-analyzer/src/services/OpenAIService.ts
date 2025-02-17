@@ -32,7 +32,7 @@ export class OpenAIService extends BaseService {
     })
   })
 
-  async analyzePost(postId: string, title: string, content: string, url: string): Promise<ThemeAnalysis> {
+  async analyzePost(postId: string, title: string, content: string): Promise<ThemeAnalysis> {
     return this.withErrorHandling(async () => {
       console.log(`[OpenAI] Analyzing post: "${title.substring(0, 50)}..."`);
       
@@ -86,16 +86,15 @@ export class OpenAIService extends BaseService {
 
       console.log(`[OpenAI] Analysis complete for post: ${postId}`);
       return {
+        id: crypto.randomUUID(),
         post_id: postId,
-        title: title,
-        url: url,
         categories: analysis.categories,
         reasoning: analysis.reasoning
       }
     })
   }
 
-  async analyzeBatch(posts: Array<{ id: string, title: string, content: string, url: string }>): Promise<ThemeAnalysis[]> {
+  async analyzeBatch(posts: Array<{ id: string, title: string, content: string }>): Promise<ThemeAnalysis[]> {
     return this.withErrorHandling(async () => {
       console.log(`[OpenAI] Starting batch analysis of ${posts.length} posts`);
       // Process in parallel with concurrency limit
@@ -105,7 +104,7 @@ export class OpenAIService extends BaseService {
       for (let i = 0; i < posts.length; i += concurrencyLimit) {
         const batch = posts.slice(i, i + concurrencyLimit)
         const analyses = await Promise.all(
-          batch.map(post => this.analyzePost(post.id, post.title, post.content, post.url))
+          batch.map(post => this.analyzePost(post.id, post.title, post.content))
         )
         results.push(...analyses)
       }

@@ -12,7 +12,15 @@ export class ThemeModel extends BaseModel<ThemeAnalysis> {
   async findByPostIds(postIds: string[]): Promise<ThemeAnalysis[]> {
     const { data, error } = await this.supabase
       .from('theme_analyses')
-      .select('*')
+      .select(`
+        *,
+        posts (
+          id,
+          title,
+          url,
+          score
+        )
+      `)
       .in('post_id', postIds)
 
     if (error) throw error
@@ -22,13 +30,8 @@ export class ThemeModel extends BaseModel<ThemeAnalysis> {
   async createBatch(analyses: Array<Omit<ThemeAnalysis, 'id' | 'analyzed_at'>>): Promise<ThemeAnalysis[]> {
     const { data, error } = await this.supabase
       .from('theme_analyses')
-      .upsert(analyses.map(analysis => ({
-        post_id: analysis.post_id,
-        categories: analysis.categories,
-        reasoning: analysis.reasoning
-      })), {
-        onConflict: 'post_id',
-        ignoreDuplicates: true
+      .upsert(analyses, {
+        onConflict: 'post_id'
       })
       .select()
 
