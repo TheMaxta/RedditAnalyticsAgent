@@ -9,18 +9,28 @@ import {
 import { RedditPost } from "@/types/reddit";
 import { ThemeAnalysis } from "@/types/themes";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowBigUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+interface Post {
+  id: string;
+  title: string;
+  content: string | null;
+  score: number;
+  num_comments: number;
+  url: string;
+  created_at: string;
+}
+
 interface PostsTableProps {
-  posts: RedditPost[];
+  posts: Post[];
   themes?: ThemeAnalysis[];
   isAnalyzing: boolean;
 }
 
 export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps) {
   const getThemesForPost = (postUrl: string) => {
-    const analysis = themes.find(t => t.postId === postUrl);
+    const analysis = themes.find(t => t.post_id === postUrl);
     if (!analysis) return [];
 
     const activeThemes = [];
@@ -31,19 +41,22 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
     return activeThemes;
   };
 
+  // Sort posts by score
+  const sortedPosts = [...posts].sort((a, b) => b.score - a.score);
+
   return (
     <Table>
       <TableHeader className="bg-table-header text-white">
         <TableRow>
           <TableHead>Title</TableHead>
           <TableHead className="w-[200px]">Categories</TableHead>
-          <TableHead className="w-[100px] text-right">Score</TableHead>
+          <TableHead className="w-[100px] text-right">Upvotes</TableHead>
           <TableHead className="w-[100px] text-right">Comments</TableHead>
           <TableHead className="w-[150px] text-right">Posted</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {posts.map((post, index) => (
+        {sortedPosts.map((post, index) => (
           <TableRow key={post.url} className={index % 2 === 0 ? "bg-table-row" : ""}>
             <TableCell>
               <a 
@@ -77,10 +90,15 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
                 </div>
               )}
             </TableCell>
-            <TableCell className="text-right">{post.score}</TableCell>
-            <TableCell className="text-right">{post.numComments}</TableCell>
             <TableCell className="text-right">
-              {formatDistanceToNow(post.created, { addSuffix: true })}
+              <div className="flex items-center justify-end gap-1">
+                <ArrowBigUp className="h-4 w-4 text-caribbean_current" />
+                {post.score}
+              </div>
+            </TableCell>
+            <TableCell className="text-right">{post.num_comments}</TableCell>
+            <TableCell className="text-right">
+              {formatDistanceToNow(post.created_at, { addSuffix: true })}
             </TableCell>
           </TableRow>
         ))}

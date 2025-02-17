@@ -6,9 +6,14 @@ export interface PostThemes {
 }
 
 export interface ThemeAnalysis {
-  postId: string;
+  post_id: string;
   title: string;
-  categories: PostThemes;
+  categories: {
+    isSolutionRequest: boolean;
+    isPainOrAnger: boolean;
+    isAdviceRequest: boolean;
+    isMoneyTalk: boolean;
+  };
   reasoning: {
     solutionRequest?: string | null;
     painOrAnger?: string | null;

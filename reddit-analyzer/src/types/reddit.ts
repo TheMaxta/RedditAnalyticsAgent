@@ -1,8 +1,10 @@
 export interface RedditPost {
+  id: string;
   title: string;
+  content: string | null;
   score: number;
-  content: string;
+  num_comments: number;
   url: string;
-  created: Date;
-  numComments: number;
+  created_at: string;
+  reddit_id: string;
 } 

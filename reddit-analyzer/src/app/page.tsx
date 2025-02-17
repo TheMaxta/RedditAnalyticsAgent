@@ -2,19 +2,47 @@
 
 import { AddSubredditModal } from "@/components/AddSubredditModal";
 import { SubredditCard } from "@/components/SubredditCard";
-import { useState } from "react";
-
-// This will be replaced with actual data storage later
-const INITIAL_SUBREDDITS = ["ollama", "openai", "ai", "llama3"];
+import { SubredditModel } from "@/models/SubredditModel";
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [subreddits, setSubreddits] = useState(["ollama", "openai"]);
+  const [subreddits, setSubreddits] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const subredditModel = new SubredditModel();
 
-  const handleAddSubreddit = (newSubreddit: string) => {
+  useEffect(() => {
+    async function loadSubreddits() {
+      try {
+        const data = await subredditModel.findAll();
+        setSubreddits(data.map(s => s.name));
+      } catch (error) {
+        console.error('Failed to load subreddits:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSubreddits();
+  }, []);
+
+  const handleAddSubreddit = async (newSubreddit: string) => {
     if (!subreddits.includes(newSubreddit)) {
-      setSubreddits([...subreddits, newSubreddit]);
+      try {
+        await subredditModel.create({
+          name: newSubreddit,
+          last_fetched: null,
+          created_at: new Date().toISOString()
+        });
+        setSubreddits([...subreddits, newSubreddit]);
+      } catch (error) {
+        console.error('Failed to add subreddit:', error);
+      }
     }
   };
+
+  if (loading) {
+    return <div>Loading subreddits...</div>;
+  }
 
   return (
     <main className="container py-8">

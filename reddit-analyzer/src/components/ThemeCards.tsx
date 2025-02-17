@@ -54,9 +54,9 @@ export function ThemeCards({ analyses = [] }: ThemeCardsProps) {
             </SheetHeader>
             <div className="mt-4 space-y-4">
               {theme.posts.map(post => (
-                <div key={post.postId} className="space-y-2">
+                <div key={post.post_id} className="space-y-2">
                   <a 
-                    href={post.postId} 
+                    href={post.post_id} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="font-medium hover:underline"
