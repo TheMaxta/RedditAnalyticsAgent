@@ -31,6 +31,21 @@ export function ThemeCards({ analyses = [] }: ThemeCardsProps) {
       title: "Money Talk",
       posts: analyses.filter(a => a.categories.isMoneyTalk),
       description: "Posts discussing spending or money"
+    },
+    research: {
+      title: "Research & Studies",
+      posts: analyses.filter(a => a.categories.isResearch),
+      description: "Posts about research, papers, or studies"
+    },
+    discussion: {
+      title: "General Discussion",
+      posts: analyses.filter(a => a.categories.isDiscussion),
+      description: "Open discussions and conversations"
+    },
+    videoContent: {
+      title: "Video Content",
+      posts: analyses.filter(a => a.categories.hasVideoContent),
+      description: "Posts referencing or sharing videos"
     }
   };
 

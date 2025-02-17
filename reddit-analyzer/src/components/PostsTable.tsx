@@ -38,6 +38,9 @@ export function PostsTable({ posts, themes = [], isAnalyzing }: PostsTableProps)
     if (analysis.categories.isPainOrAnger) activeThemes.push("Pain & Anger");
     if (analysis.categories.isAdviceRequest) activeThemes.push("Advice");
     if (analysis.categories.isMoneyTalk) activeThemes.push("Money");
+    if (analysis.categories.isResearch) activeThemes.push("Research");
+    if (analysis.categories.isDiscussion) activeThemes.push("Discussion");
+    if (analysis.categories.hasVideoContent) activeThemes.push("Video");
     return activeThemes;
   };
 

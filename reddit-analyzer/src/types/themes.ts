@@ -13,12 +13,18 @@ export interface ThemeAnalysis {
     isPainOrAnger: boolean;
     isAdviceRequest: boolean;
     isMoneyTalk: boolean;
+    isResearch: boolean;
+    isDiscussion: boolean;
+    hasVideoContent: boolean;
   };
   reasoning: {
     solutionRequest?: string | null;
-    adviceRequest?: string | null;
     painOrAnger?: string | null;
+    adviceRequest?: string | null;
     moneyTalk?: string | null;
+    research?: string | null;
+    discussion?: string | null;
+    videoContent?: string | null;
   };
   posts?: {
     id: string;

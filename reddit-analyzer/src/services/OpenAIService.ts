@@ -22,13 +22,19 @@ export class OpenAIService extends BaseService {
       isSolutionRequest: z.boolean(),
       isPainOrAnger: z.boolean(),
       isAdviceRequest: z.boolean(),
-      isMoneyTalk: z.boolean()
+      isMoneyTalk: z.boolean(),
+      isResearch: z.boolean(),
+      isDiscussion: z.boolean(),
+      hasVideoContent: z.boolean()
     }),
     reasoning: z.object({
       solutionRequest: z.string().nullable().optional(),
       painOrAnger: z.string().nullable().optional(),
       adviceRequest: z.string().nullable().optional(),
-      moneyTalk: z.string().nullable().optional()
+      moneyTalk: z.string().nullable().optional(),
+      research: z.string().nullable().optional(),
+      discussion: z.string().nullable().optional(),
+      videoContent: z.string().nullable().optional()
     })
   })
 
@@ -60,9 +66,12 @@ export class OpenAIService extends BaseService {
                   isSolutionRequest: { type: "boolean" },
                   isPainOrAnger: { type: "boolean" },
                   isAdviceRequest: { type: "boolean" },
-                  isMoneyTalk: { type: "boolean" }
+                  isMoneyTalk: { type: "boolean" },
+                  isResearch: { type: "boolean" },
+                  isDiscussion: { type: "boolean" },
+                  hasVideoContent: { type: "boolean" }
                 },
-                required: ["isSolutionRequest", "isPainOrAnger", "isAdviceRequest", "isMoneyTalk"]
+                required: ["isSolutionRequest", "isPainOrAnger", "isAdviceRequest", "isMoneyTalk", "isResearch", "isDiscussion", "hasVideoContent"]
               },
               reasoning: {
                 type: "object",
@@ -70,7 +79,10 @@ export class OpenAIService extends BaseService {
                   solutionRequest: { type: "string" },
                   painOrAnger: { type: "string" },
                   adviceRequest: { type: "string" },
-                  moneyTalk: { type: "string" }
+                  moneyTalk: { type: "string" },
+                  research: { type: "string" },
+                  discussion: { type: "string" },
+                  videoContent: { type: "string" }
                 }
               }
             },
